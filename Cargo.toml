@@ -1,0 +1,13 @@
+[package]
+
+name = "speakerbotrs"
+version = "0.0.1"
+authors = [ "James Burke <jrburke@gmail.com>" ]
+
+[dependencies]
+
+slack = "0.13.0"
+
+[[bin]]
+
+name = "speakerbotrs"
