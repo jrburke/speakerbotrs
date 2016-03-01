@@ -19,6 +19,7 @@
 //
 
 extern crate slack;
+use slack::Event;
 
 struct MyHandler;
 
@@ -26,9 +27,29 @@ struct MyHandler;
 impl slack::EventHandler for MyHandler {
     fn on_event(&mut self,
                 cli: &mut slack::RtmClient,
-                event: Result<&slack::Event, slack::Error>,
+                event_result: Result<&Event, slack::Error>,
                 raw_json: &str) {
-        println!("on_event(event: {:?}, raw_json: {:?})", event, raw_json);
+        println!("on_event(event: {:?}, raw_json: {:?})", event_result, raw_json);
+
+        let event = match event_result {
+            Ok(event) => event,
+            Err(e) => {
+                println!("on_event got ERROR: {}", e);
+                return;
+            }
+        };
+
+        match *event {
+            Event::Message(ref message) => {
+                match message.clone() {
+                    slack::Message::Standard { ts, channel: _, user, text, is_starred: _, pinned_to: _, reactions: _, edited: _, attachments: _ } => {
+                        println!("SCORE: {:?} {:?}", user, text);
+                    },
+                    _ => {}
+                }
+            },
+            _ => {}
+        }
     }
 
     fn on_ping(&mut self, cli: &mut slack::RtmClient) {
@@ -42,16 +63,28 @@ impl slack::EventHandler for MyHandler {
     fn on_connect(&mut self, cli: &mut slack::RtmClient) {
         println!("on_connect");
 
-        let channel_id = cli.get_channel_id("general");
-        println!("Got channel ID: {}", channel_id.unwrap());
+        let channels = cli.get_channels();
 
-        // Do a few things using the api:
-        // send a message over the real time api websocket
-        let _ = cli.send_message(channel_id.unwrap(), "Hello world! (rtm)");
-        // post a message as a user to the web api
-        let _ = cli.post_message(channel_id.unwrap(), "hello world! (postMessage)", None);
-        // set a channel topic via the web api
-        // let _ = cli.set_topic("#general", "bots rule!");
+        match channels.iter().position(|channel| {
+            println!("Checkng id {}", channel.name);
+            channel.name == "general"
+        }) {
+            None => {},
+            Some(i) => {
+                let channel_id = &(channels[i].id);
+
+                println!("Got channel ID: {}", channel_id);
+
+
+                // Do a few things using the api:
+                // send a message over the real time api websocket
+                let _ = cli.send_message(channel_id, "Hello world! (rtm)");
+                // post a message as a user to the web api
+                let _ = cli.post_message(channel_id, "hello world! (postMessage)", None);
+                // set a channel topic via the web api
+                // let _ = cli.set_topic("#general", "bots rule!");
+            }
+        }
     }
 }
 
